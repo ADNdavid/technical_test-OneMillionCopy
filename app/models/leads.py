@@ -1,13 +1,16 @@
-from sqlmodel import SQLModel, Field, field_validator
+from sqlmodel import SQLModel, Field
 from typing import Optional
+from pydantic import field_validator
+from datetime import datetime
+import uuid
 
-class Lead(SQLModel, table=True):
-    nombre: str 
-    email: str = Field(unique=True)
-    telefono: Optional[str] = Field(default=None)
-    fuente: str
-    producto_interes: Optional[str] = Field(default=None)
-    presupuesto: Optional[float] = Field(default=None)
+class LeadBase(SQLModel):
+    nombre: str = Field(description="Nombre completo del usuario")
+    email: str = Field(unique=True, description="Correo electrónico del usuario")
+    telefono: Optional[str] = Field(default=None, description="Número de teléfono del usuario")
+    fuente: str = Field(description="Fuente de donde proviene el lead")
+    producto_interes: Optional[str] = Field(default=None, description="Producto de interés del usuario")
+    presupuesto: Optional[float] = Field(default=None, description="Presupuesto en USD")
     
     @field_validator('nombre')
     @classmethod
@@ -34,3 +37,11 @@ class Lead(SQLModel, table=True):
         if value not in permitidos:
             raise ValueError('La fuente no es válida, debe ser una de las siguientes: ' + ', '.join(permitidos))
         return value
+
+class Lead(LeadBase, table=True):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True, index=True)
+    created_at: datetime = Field(default_factory=datetime.now, description="Fecha de registro en el sistema")
+    updated_at: datetime = Field(default_factory=datetime.now, description="Fecha de última actualización del registro")
+    deleted: bool = Field(default=False)
+
+#class LeadCreate(Lead):
