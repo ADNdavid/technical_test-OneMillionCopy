@@ -3,13 +3,14 @@ from sqlmodel import SQLModel, create_engine, Session
 from fastapi import Depends, FastAPI
 import os
 
+# Configuración para MySQL
+user = os.getenv("MYSQL_USER")
+password = os.getenv("MYSQL_PASSWORD")
+host = os.getenv("MYSQL_HOST")
+port = os.getenv("MYSQL_PORT")
+db_name = os.getenv("MYSQL_DB_NAME")
 
-user        = os.environ.get("MYSQL_USER")  
-password    = os.environ.get("MYSQL_PASSWORD")  
-host        = os.environ.get("MYSQL_HOST")  
-port        = os.environ.get("MYSQL_PORT")
-db_name     = os.environ.get("MYSQL_DB_NAME")
-url         = f"mysql+pymysql://{user}:{password}@{host}:{port}/{db_name}"
+url = f"mysql+pymysql://{user}:{password}@{host}:{port}/{db_name}"
 
 # crear el motor que gestionará las sesiones
 engine = create_engine(url)
