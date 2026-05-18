@@ -1,6 +1,7 @@
-def main():
-    print("Hello from technical-test-onemillioncopy!")
+from fastapi import FastAPI
 
+app = FastAPI()
 
-if __name__ == "__main__":
-    main()
+@app.get("/")
+async def root():
+    return {"message": "Prueba Técnica OneMillionCopy, realizada por Anderson Sepulveda"}

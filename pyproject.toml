@@ -4,4 +4,7 @@ version = "0.1.0"
 description = "Prueba técnica para One Million Copy: API REST que permita registrar leads, consultarlos, y generar un resumen inteligente"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "fastapi[standard]>=0.136.1",
+    "sqlmodel>=0.0.38",
+]
