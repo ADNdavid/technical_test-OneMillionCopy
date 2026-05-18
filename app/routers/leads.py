@@ -1,9 +1,10 @@
+from typing import Annotated
 from fastapi import APIRouter, status, HTTPException, Query
-from sqlmodel import func, select
-from app.models.leads import Lead, LeadBase
+from sqlmodel import select
+from ..models.leads import Lead, LeadBase
+from ..services.leads import get_leads_stats, get_leads_ai_summary
 from db import session_dependency
 from datetime import datetime
-from app.services import leads as leads_service
 
 router = APIRouter(prefix="/api", tags=["leads"])
 
@@ -17,9 +18,12 @@ async def create_lead(lead: LeadBase, session: session_dependency):
     return lead_create
 
 @router.get("/leads", status_code=status.HTTP_200_OK)
-async def get_leads(session: session_dependency,
-                    fuente: str = Query(None, description="Filtrar por fuente de lead"),
-                    producto_interes: str = Query(None, description="Filtrar por producto de interés")):
+async def get_leads(
+    session: session_dependency,
+    fuente: Annotated[str | None, Query(description="Filtrar por fuente de lead")] = None,
+    producto_interes: Annotated[str | None, Query(description="Filtrar por producto de interés")] = None,
+):
+    print("Obteniendo leads")
     query = select(Lead)
     if fuente:
         query = query.where(Lead.fuente == fuente)
@@ -70,9 +74,18 @@ async def soft_delete_lead(lead_id: str, session: session_dependency):
     return None
 
 # Endpoint para retornar estadísticas
-@router.get("/leads/stats", status_code=status.HTTP_200_OK)
-async def get_leads_stats(session: session_dependency):
-    print("Obteniendo estadísticas de leads...")
-    data = leads_service.get_leads_stats(session)
-    print(f"Estadísticas obtenidas: {data}")
-    return data
+@router.get("/leads/stats/", status_code=status.HTTP_200_OK)
+async def get_stats(session: session_dependency):
+    print("Obteniendo estadísticas de leads")
+    return get_leads_stats(session)
+
+@router.get("/leads/ai/summary", status_code=status.HTTP_200_OK)
+async def get_leads_ai_summary_endpoint(
+    session: session_dependency,
+    fuente: Annotated[str | None, Query(description="Filtrar por fuente de lead")] = None,
+    fecha_inicio: Annotated[datetime | None, Query(description="Fecha inicial para el filtro")] = None,
+    fecha_fin: Annotated[datetime | None, Query(description="Fecha final para el filtro")] = None,
+):
+    summary = get_leads_ai_summary(session, fuente=fuente, fecha_inicio=fecha_inicio, fecha_fin=fecha_fin)
+    return {"summary": summary}
+
