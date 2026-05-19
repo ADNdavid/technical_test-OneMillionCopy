@@ -84,7 +84,7 @@ async def get_leads_ai_summary_endpoint(
     fecha_inicio: Annotated[datetime | None, Query(description="Fecha inicial para el filtro")] = None,
     fecha_fin: Annotated[datetime | None, Query(description="Fecha final para el filtro")] = None,
 ):
-    summary = get_leads_ai_summary(session, fuente=fuente, fecha_inicio=fecha_inicio, fecha_fin=fecha_fin)
+    summary = await get_leads_ai_summary(session, fuente=fuente, fecha_inicio=fecha_inicio, fecha_fin=fecha_fin)
     return {"summary": summary}
 
 

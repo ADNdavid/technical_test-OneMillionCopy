@@ -1,11 +1,10 @@
 import json
 import os
-from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
 from sqlmodel import Session, func, select
 from ..models.leads import Lead
 from datetime import datetime, timedelta
 from faker import Faker
+import httpx
 
 
 def _active_lead_query():
@@ -75,7 +74,7 @@ def generate_fake_leads(count: int = 10) -> list[dict]:
     return resultados
 
 
-def get_leads_ai_summary(
+async def get_leads_ai_summary(
     session: Session,
     fuente: str | None = None,
     fecha_inicio: datetime | None = None,
@@ -89,7 +88,7 @@ def get_leads_ai_summary(
     prompt = _build_summary_prompt(
         [_serialize_lead(lead) for lead in leads], fuente, fecha_inicio, fecha_fin
     )
-    return _call_openai(prompt)
+    return await _call_openai(prompt)
 
 
 def _build_summary_prompt(leads_data, fuente, fecha_inicio, fecha_fin) -> str:
@@ -109,42 +108,41 @@ def _build_summary_prompt(leads_data, fuente, fecha_inicio, fecha_fin) -> str:
     )
 
 
-def _call_openai(prompt: str) -> str:
+async def _call_openai(prompt: str) -> str:
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         raise RuntimeError("OPENAI_API_KEY no está configurada en el entorno")
 
     url = "https://api.openai.com/v1/chat/completions"
-    payload = json.dumps(
-        {
-            "model": os.getenv("OPENAI_MODEL", "gpt-3.5-turbo"),
-            "messages": [
-                {"role": "system", "content": "Eres un asistente útil para análisis de leads."},
-                {"role": "user", "content": prompt},
-            ],
-            "temperature": 0.7,
-            "max_tokens": 500,
-        }
-    ).encode("utf-8")
+    payload = {
+        "model": os.getenv("OPENAI_MODEL"),
+        "messages": [
+            {"role": "system", "content": "Eres un asistente útil para análisis de leads."},
+            {"role": "user", "content": prompt},
+        ],
+        "temperature": 0.7,
+        "max_tokens": 500,
+    }
+    print(f"Llamando a OpenAI con el siguiente prompt: {prompt}")
 
-    request = Request(
-        url,
-        data=payload,
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}",
-        },
-        method="POST",
-    )
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.post(
+            url,
+            json=payload,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {api_key}",
+            },
+        )
 
     try:
-        with urlopen(request, timeout=30) as response:
-            response_data = json.loads(response.read().decode("utf-8"))
-    except HTTPError as exc:
-        raise RuntimeError(f"Error llamando a OpenAI: {exc.code} {exc.read().decode('utf-8')}" )
-    except URLError as exc:
-        raise RuntimeError(f"Error de red al llamar a OpenAI: {exc.reason}")
+        response.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        raise RuntimeError(f"Error llamando a OpenAI: {exc.response.status_code} {exc.response.text}") from exc
+    except httpx.RequestError as exc:
+        raise RuntimeError(f"Error de red al llamar a OpenAI: {exc}") from exc
 
+    response_data = response.json()
     message = response_data.get("choices", [{}])[0].get("message", {}).get("content")
     if not message:
         raise RuntimeError("Respuesta de OpenAI incompleta o vacía")

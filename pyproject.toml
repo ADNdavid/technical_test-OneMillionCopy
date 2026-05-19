@@ -10,4 +10,5 @@ dependencies = [
     "sqlmodel>=0.0.38",
     "cryptography>=41.0.0",
     "faker>=22.0.0",
+    "httpx>=0.26.0",
 ]
