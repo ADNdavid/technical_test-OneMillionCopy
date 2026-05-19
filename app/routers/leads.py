@@ -2,7 +2,7 @@ from typing import Annotated
 from fastapi import APIRouter, status, HTTPException, Query
 from sqlmodel import select
 from ..models.leads import Lead, LeadBase
-from ..services.leads import get_leads_stats, get_leads_ai_summary
+from ..services.leads import get_leads_stats, get_leads_ai_summary, generate_fake_leads
 from db import session_dependency
 from datetime import datetime
 
@@ -61,7 +61,6 @@ async def delete_lead(lead_id: str, session: session_dependency):
     session.commit()
     return None
 
-# Endpoint de soft delete
 @router.delete("/leads/{lead_id}/soft", status_code=status.HTTP_204_NO_CONTENT)
 async def soft_delete_lead(lead_id: str, session: session_dependency):
     lead_db = session.get(Lead, lead_id)
@@ -73,7 +72,6 @@ async def soft_delete_lead(lead_id: str, session: session_dependency):
     session.commit()
     return None
 
-# Endpoint para retornar estadísticas
 @router.get("/leads/stats/", status_code=status.HTTP_200_OK)
 async def get_stats(session: session_dependency):
     print("Obteniendo estadísticas de leads")
@@ -88,4 +86,22 @@ async def get_leads_ai_summary_endpoint(
 ):
     summary = get_leads_ai_summary(session, fuente=fuente, fecha_inicio=fecha_inicio, fecha_fin=fecha_fin)
     return {"summary": summary}
+
+
+@router.post("/leads/fake", status_code=status.HTTP_201_CREATED)
+async def create_fake_leads(
+    count: Annotated[int, Query(description="Cantidad de leads a generar")] = 10,
+    session: session_dependency = None,
+):
+    fake_leads = generate_fake_leads(count)
+    created = []
+    for data in fake_leads:
+        lead_validated = LeadBase.model_validate(data)
+        lead_create = Lead(**lead_validated.model_dump())
+        session.add(lead_create)
+        created.append(lead_create)
+    session.commit()
+    for item in created:
+        session.refresh(item)
+    return created
 

@@ -5,6 +5,7 @@ from urllib.request import Request, urlopen
 from sqlmodel import Session, func, select
 from ..models.leads import Lead
 from datetime import datetime, timedelta
+from faker import Faker
 
 
 def _active_lead_query():
@@ -54,6 +55,24 @@ def _serialize_lead(lead: Lead) -> dict:
         "producto_interes": lead.producto_interes,
         "presupuesto": lead.presupuesto,
     }
+
+
+def generate_fake_leads(count: int = 10) -> list[dict]:
+    faker = Faker(locale="es_CO")
+    fuentes = ["instagram", "facebook", "landing_page", "referido", "otro"]
+    resultados = []
+    for _ in range(max(1, int(count))):
+        resultados.append(
+            {
+                "nombre": faker.name(),
+                "email": faker.unique.email(),
+                "telefono": faker.phone_number(),
+                "fuente": faker.random_element(elements=fuentes),
+                "producto_interes": faker.word(),
+                "presupuesto": round(faker.pyfloat(min_value=50, max_value=10000, right_digits=2), 2),
+            }
+        )
+    return resultados
 
 
 def get_leads_ai_summary(
@@ -131,3 +150,4 @@ def _call_openai(prompt: str) -> str:
         raise RuntimeError("Respuesta de OpenAI incompleta o vacía")
 
     return message.strip()
+

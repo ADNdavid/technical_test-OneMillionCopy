@@ -43,5 +43,3 @@ class Lead(LeadBase, table=True):
     created_at: datetime = Field(default_factory=datetime.now, description="Fecha de registro en el sistema")
     updated_at: datetime = Field(default_factory=datetime.now, description="Fecha de última actualización del registro")
     deleted: bool = Field(default=False)
-
-#class LeadCreate(Lead):
